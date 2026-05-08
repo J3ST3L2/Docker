@@ -17,20 +17,48 @@ This repo stores sanitized configuration and operating notes only. Runtime data,
 - Graylog: upgraded from 5.x to 7.1; MongoDB is 7.0 with FCV 7.0.
 - Akvorado: rebuilt and running on `http://10.20.60.15:8081`; listener ports are `2055/udp`, `4739/udp`, and `6343/udp`.
 
-## Before Deploying
+## Configuration Model
 
-Create stack-local `.env` files with real secrets. Do not commit them.
+This stack is now managed as Git-backed desired state plus 1Password-backed secrets.
 
-Required values include:
+- Non-secret desired state lives in `vars/`.
+- Secret references live in `.env.tpl` and other `.tpl` files.
+- Real secret values live in 1Password.
+- Runtime env files are rendered on the Docker host and should not be committed.
 
-- `MYSQL_ROOT_PASSWORD`
-- `MYSQL_PASSWORD`
-- `GRAYLOG_PASSWORD_SECRET`
-- `GRAYLOG_ROOT_PASSWORD_SHA2`
-- `OXIDIZED_USERNAME`
-- `OXIDIZED_PASSWORD`
-- `LIBRENMS_API_TOKEN`
-- `AKVORADO_SNMP_COMMUNITY`
+See `docs/config-model.md` and `docs/1password-secrets.md`.
+
+## Deploying
+
+Preferred flow:
+
+1. Update Git-backed config or variables.
+2. Update 1Password if a secret changes.
+3. Run the matching `/secrets-test` command from Discord.
+4. Run the matching `/redeploy` command from Discord.
+
+Direct host fallback examples:
+
+```bash
+cd /opt/docker-stacks/nms-stack
+sudo ./scripts/render-nms-secrets.sh
+sudo docker compose --env-file /run/nms-stack.env up -d
+sudo rm -f /run/nms-stack.env
+```
+
+```bash
+cd /opt/graylog-stack
+sudo ./scripts/render-graylog-secrets.sh
+sudo docker compose --env-file /run/graylog-stack.env up -d
+sudo rm -f /run/graylog-stack.env
+```
+
+```bash
+cd /opt/docker/akvorado
+sudo ./scripts/render-akvorado-secrets.sh
+sudo docker compose --env-file /run/akvorado.env up -d
+sudo rm -f /run/akvorado.env
+```
 
 ## Repo Layout
 
@@ -38,4 +66,5 @@ Required values include:
 - `stacks/nms-stack/oxidized/config.example`: redacted Oxidized config.
 - `stacks/graylog-stack/`: standalone Graylog stack.
 - `stacks/akvorado/`: Akvorado stack and config.
+- `vars/`: non-secret desired state and 1Password references.
 - `docs/`: review notes, upgrade notes, and work recommendations.
