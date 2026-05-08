@@ -16,6 +16,10 @@ Fields:
 
 - `PIA_USER`
 - `PIA_PASS`
+- `SONARR_API_KEY`
+- `RADARR_API_KEY`
+- `PROWLARR_API_KEY`
+- `QBITTORRENT_WEBUI_PASSWORD_PBKDF2`
 
 ## Server Bootstrap Secret
 
@@ -45,10 +49,16 @@ docker compose --env-file /run/arr-stack.env up -d
 sudo rm -f /run/arr-stack.env
 ```
 
-## Current Limitations
+## App-Internal Secret Rendering
 
-The PIA credentials are cleanly handled through Compose environment variables.
+The PIA credentials are handled through Compose environment variables.
 
-Sonarr, Radarr, and Prowlarr API keys live in their app config/databases. Keep a reference copy in 1Password, but changing the 1Password value alone will not rotate the app. Rotate those inside each app, then update 1Password.
+Sonarr, Radarr, and Prowlarr API keys live in `config.xml`. The script below updates only the `ApiKey` element from 1Password:
 
-qBittorrent WebUI password hash is stored in qBittorrent config. Keep the real password in 1Password, rotate it in qBittorrent, then update 1Password.
+```bash
+sudo /opt/docker-stacks/arr-stack/scripts/render-arr-app-secrets.sh
+```
+
+qBittorrent stores the WebUI password as a PBKDF2 hash. The render script updates the `WebUI\Password_PBKDF2` field from 1Password.
+
+Changing these values in 1Password does not live-update running services. Use `/redeploy target:arr` after changes.
