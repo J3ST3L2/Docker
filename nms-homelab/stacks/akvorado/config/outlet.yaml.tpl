@@ -4,7 +4,7 @@ metadata:
     - type: snmp
       credentials:
         10.20.0.0/16:
-          communities: op://Homelab/Akvorado Stack/AKVORADO_SNMP_COMMUNITY
+          communities: op://JesterTek/Akvorado Stack/AKVORADO_SNMP_COMMUNITY
 routing:
   provider:
     type: bmp
