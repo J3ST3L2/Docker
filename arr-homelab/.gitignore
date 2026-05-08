@@ -1,0 +1,24 @@
+# Runtime app databases and logs
+**/*.db
+**/*.db-shm
+**/*.db-wal
+**/*.pid
+**/logs/
+**/log/
+
+# Secrets
+.env
+*.env
+!.env.example
+**/asp/key-*.xml
+
+# Runtime/download data
+downloads/
+Downloads/
+**/Backups/
+**/backup/
+**/config.backup/
+
+# Local OS files
+.DS_Store
+Thumbs.db
