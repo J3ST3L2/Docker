@@ -25,6 +25,10 @@ The file intentionally stores only secret references such as:
 ```text
 op://JesterTek/ARR Stack/PIA_USER
 op://JesterTek/ARR Stack/PIA_PASS
+op://JesterTek/ARR Stack/SONARR_API_KEY
+op://JesterTek/ARR Stack/RADARR_API_KEY
+op://JesterTek/ARR Stack/PROWLARR_API_KEY
+op://JesterTek/ARR Stack/QBITTORRENT_WEBUI_PASSWORD_PBKDF2
 ```
 
 ## Runtime Render
@@ -42,6 +46,13 @@ It renders:
 ```
 
 The env file is used by Docker Compose and deleted after Discord-triggered redeploys.
+
+`scripts/render-arr-app-secrets.sh` updates only the secret-bearing app config fields from 1Password:
+
+- Sonarr `ApiKey`
+- Radarr `ApiKey`
+- Prowlarr `ApiKey`
+- qBittorrent `WebUI\Password_PBKDF2`
 
 ## Rule
 
