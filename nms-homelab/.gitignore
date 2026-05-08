@@ -1,0 +1,33 @@
+# Runtime data and generated state
+**/db/
+**/mongodb/
+**/opensearch/
+**/os_data/
+**/graylog/
+**/geoip/*.mmdb
+**/storage.git/
+**/crash
+**/pid
+
+# Backups and exports
+**/backups/
+*.sql
+*.sql.gz
+*.archive
+*.archive.gz
+*.tgz
+*.tar
+*.tar.gz
+
+# Secrets
+.env
+*.env
+!.env.example
+**/config
+!**/config/
+!**/config/*.yaml
+!stacks/nms-stack/oxidized/config.example
+
+# Local tooling
+.DS_Store
+Thumbs.db
