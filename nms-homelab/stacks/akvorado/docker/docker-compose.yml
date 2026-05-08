@@ -1,0 +1,156 @@
+---
+networks:
+  default:
+    enable_ipv6: true
+    ipam:
+      config:
+        - subnet: 247.16.14.0/24
+        - subnet: fd1c:8ce3:6fb:1::/64
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-akvorado
+
+volumes:
+  akvorado-kafka:
+  akvorado-clickhouse:
+  akvorado-run:
+  akvorado-console-db:
+
+services:
+  kafka:
+    extends:
+      file: versions.yml
+      service: kafka
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: controller,broker
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: CLIENT://:9092,CONTROLLER://:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CLIENT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_ADVERTISED_LISTENERS: CLIENT://kafka:9092
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: CLIENT
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    volumes:
+      - akvorado-kafka:/var/lib/kafka/data
+    restart: unless-stopped
+    healthcheck:
+      interval: 20s
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--list", "--bootstrap-server", "kafka:9092"]
+
+  redis:
+    extends:
+      file: versions.yml
+      service: redis
+    restart: unless-stopped
+    healthcheck:
+      interval: 20s
+      test: ["CMD-SHELL", "timeout 3 redis-cli ping | grep -q PONG"]
+
+  akvorado-orchestrator:
+    extends:
+      file: versions.yml
+      service: akvorado
+    command: orchestrator /etc/akvorado/akvorado.yaml
+    volumes:
+      - ../config:/etc/akvorado:ro
+      - ../geoip:/usr/share/GeoIP:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    restart: unless-stopped
+
+  akvorado-console:
+    extends:
+      file: versions.yml
+      service: akvorado
+    command: console http://akvorado-orchestrator:8080
+    volumes:
+      - akvorado-console-db:/run/akvorado
+    environment:
+      AKVORADO_CFG_CONSOLE_DATABASE_DSN: /run/akvorado/console.sqlite
+      AKVORADO_CFG_CONSOLE_BRANDING: ${AKVORADO_CFG_CONSOLE_BRANDING-false}
+    depends_on:
+      akvorado-orchestrator:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - 8081:8080/tcp
+    restart: unless-stopped
+
+  akvorado-inlet:
+    extends:
+      file: versions.yml
+      service: akvorado
+    command: inlet http://akvorado-orchestrator:8080
+    volumes:
+      - akvorado-run:/run/akvorado
+    depends_on:
+      akvorado-orchestrator:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    ports:
+      - 2055:2055/udp
+      - 4739:4739/udp
+      - 6343:6343/udp
+    restart: unless-stopped
+
+  akvorado-outlet:
+    extends:
+      file: versions.yml
+      service: akvorado
+    command: outlet http://akvorado-orchestrator:8080
+    volumes:
+      - akvorado-run:/run/akvorado
+    environment:
+      AKVORADO_CFG_OUTLET_METADATA_CACHEPERSISTFILE: /run/akvorado/metadata.cache
+      AKVORADO_CFG_OUTLET_FLOW_STATEPERSISTFILE: /run/akvorado/flow.state
+    depends_on:
+      akvorado-orchestrator:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
+    ports:
+      - 10179:10179/tcp
+    restart: unless-stopped
+
+  clickhouse:
+    extends:
+      file: versions.yml
+      service: clickhouse
+    volumes:
+      - akvorado-clickhouse:/var/lib/clickhouse
+      - ./clickhouse/observability.xml:/etc/clickhouse-server/config.d/observability.xml
+      - ./clickhouse/server.xml:/etc/clickhouse-server/config.d/akvorado.xml
+      - ./clickhouse/dev.xml:/etc/clickhouse-server/config.d/low-memory.xml
+    environment:
+      CLICKHOUSE_INIT_TIMEOUT: 60
+      CLICKHOUSE_SKIP_USER_SETUP: 1
+    cap_add:
+      - SYS_NICE
+    restart: unless-stopped
+    healthcheck:
+      interval: 20s
+      test: ["CMD", "wget", "-T", "1", "--spider", "--no-proxy", "http://127.0.0.1:8123/ping"]
+
+  kafka-ui:
+    extends:
+      file: versions.yml
+      service: kafka-ui
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_READONLY: true
+    depends_on:
+      - kafka
+    restart: unless-stopped
