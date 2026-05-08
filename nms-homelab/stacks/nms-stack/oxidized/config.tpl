@@ -1,6 +1,6 @@
 ---
-username: op://Homelab/Oxidized/OXIDIZED_USERNAME
-password: op://Homelab/Oxidized/OXIDIZED_PASSWORD
+username: op://JesterTek/Oxidized/OXIDIZED_USERNAME
+password: op://JesterTek/Oxidized/OXIDIZED_PASSWORD
 model: aoscx
 interval: 3600
 use_syslog: false
@@ -28,7 +28,7 @@ source:
       model: os
       group: group
     headers:
-      X-Auth-Token: 'op://Homelab/Oxidized/LIBRENMS_API_TOKEN'
+      X-Auth-Token: 'op://JesterTek/Oxidized/LIBRENMS_API_TOKEN'
 
 model_map:
   arubaos-cx: aoscx
