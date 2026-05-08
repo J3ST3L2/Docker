@@ -1,0 +1,18 @@
+[Unit]
+Description=Homelab Discord redeploy bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/homelab-discord-bot
+Environment=ALLOWED_USER_ID=1399736899551101056
+Environment=OP_TOKEN_FILE=/etc/1password/jestertek-readonly.token
+Environment=SCRIPT_DIR=/opt/homelab-discord-bot/scripts
+ExecStart=/opt/homelab-discord-bot/venv/bin/python /opt/homelab-discord-bot/bot.py
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
