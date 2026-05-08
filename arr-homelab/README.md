@@ -29,13 +29,33 @@ The active Compose file publishes application ports from the Gluetun container b
 - `9696/tcp`: Prowlarr
 - `8191/tcp`: FlareSolverr
 
-## Before Deploying
+## Configuration Model
 
-Create a local `.env` file next to `docker-compose.yml`:
+This stack is now managed as Git-backed desired state plus 1Password-backed secrets.
 
-```env
-PIA_USER=your-username
-PIA_PASS=your-password
+- Non-secret variables live in `vars/arr.yml`.
+- Secret references live in `.env.tpl`.
+- Real secret values live in the `ARR Stack` item in 1Password.
+- The runtime env file is rendered on the Docker host and should not be committed.
+
+See `docs/config-model.md` and `docs/1password-secrets.md`.
+
+## Deploying
+
+Preferred flow:
+
+1. Update Git-backed config or variables.
+2. Update 1Password if a secret changes.
+3. Run `/secrets-test target:arr` from Discord.
+4. Run `/redeploy target:arr` from Discord.
+
+Direct host fallback:
+
+```bash
+cd /opt/docker-stacks/arr-stack
+sudo ./scripts/render-arr-env.sh
+sudo docker compose --env-file /run/arr-stack.env up -d
+sudo rm -f /run/arr-stack.env
 ```
 
 Do not commit real VPN credentials or app API keys.
