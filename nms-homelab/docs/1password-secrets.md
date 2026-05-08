@@ -8,7 +8,7 @@ Changing a secret in 1Password does not live-update a running container. Re-rend
 
 ## Vault
 
-Vault: `Homelab`
+Vault: `JesterTek`
 
 Use read-only service account tokens scoped to this vault. Store the token root-only on each Docker host under `/etc/1password/`.
 
