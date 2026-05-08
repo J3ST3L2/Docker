@@ -8,7 +8,7 @@ Changing a secret in 1Password does not live-update a running container. Re-rend
 
 ## 1Password Item
 
-Vault: `Homelab`
+Vault: `JesterTek`
 
 Item: `ARR Stack`
 
@@ -19,7 +19,7 @@ Fields:
 
 ## Server Bootstrap Secret
 
-The server still needs one bootstrap secret: a read-only 1Password service account token scoped to the `Homelab` vault.
+The server still needs one bootstrap secret: a read-only 1Password service account token scoped to the `JesterTek` vault.
 
 Recommended storage:
 
