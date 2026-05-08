@@ -1,2 +1,2 @@
-PIA_USER=op://Homelab/ARR Stack/PIA_USER
-PIA_PASS=op://Homelab/ARR Stack/PIA_PASS
+PIA_USER=op://JesterTek/ARR Stack/PIA_USER
+PIA_PASS=op://JesterTek/ARR Stack/PIA_PASS
