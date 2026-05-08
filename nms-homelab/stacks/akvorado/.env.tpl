@@ -1,0 +1,3 @@
+COMPOSE_PROJECT_NAME=akvorado
+COMPOSE_FILE=docker/docker-compose.yml
+AKVORADO_SNMP_COMMUNITY=op://Homelab/Akvorado Stack/AKVORADO_SNMP_COMMUNITY
