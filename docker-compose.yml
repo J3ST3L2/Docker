@@ -1,0 +1,7 @@
+services:
+  hosted-apps:
+    build: .
+    container_name: hosted-apps
+    restart: unless-stopped
+    ports:
+      - "8088:80"
