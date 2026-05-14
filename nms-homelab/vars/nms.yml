@@ -1,0 +1,31 @@
+---
+# Non-secret desired state for the LibreNMS/Oxidized stack.
+# Secret values are stored in 1Password and referenced by path only.
+stack:
+  name: nms
+  host: 10.20.60.15
+  remote_user: tberno
+  path: /opt/docker-stacks/nms-stack
+  compose_file: docker-compose.yml
+  runtime_env: /run/nms-stack.env
+  token_file: /etc/1password/nms-stack.token
+  render_script: /opt/docker-stacks/nms-stack/scripts/render-nms-secrets.sh
+
+services:
+  librenms_image: librenms/librenms:latest
+  mariadb_image: mariadb:10.5
+  redis_image: redis:7-alpine
+  oxidized_image: oxidized/oxidized:latest
+
+network:
+  mode: host
+  timezone: UTC
+  librenms_url: http://10.20.60.15
+  oxidized_url: http://127.0.0.1:8888
+
+secrets:
+  MYSQL_ROOT_PASSWORD: op://JesterTek/NMS Stack/MYSQL_ROOT_PASSWORD
+  MYSQL_PASSWORD: op://JesterTek/NMS Stack/MYSQL_PASSWORD
+  OXIDIZED_USERNAME: op://JesterTek/Oxidized/OXIDIZED_USERNAME
+  OXIDIZED_PASSWORD: op://JesterTek/Oxidized/OXIDIZED_PASSWORD
+  LIBRENMS_API_TOKEN: op://JesterTek/Oxidized/LIBRENMS_API_TOKEN

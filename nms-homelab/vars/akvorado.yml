@@ -1,0 +1,28 @@
+---
+# Non-secret desired state for the Akvorado flow stack.
+stack:
+  name: akvorado
+  host: 10.20.60.15
+  remote_user: tberno
+  path: /opt/docker/akvorado
+  compose_file: docker/docker-compose.yml
+  compose_project_name: akvorado
+  runtime_env: /run/akvorado.env
+  token_file: /etc/1password/akvorado-stack.token
+  render_script: /opt/docker/akvorado/scripts/render-akvorado-secrets.sh
+
+listeners:
+  netflow_udp: 2055
+  ipfix_udp: 4739
+  sflow_udp: 6343
+  bmp_tcp: 10179
+  web: 8081
+
+classification:
+  site: home
+  region: lab
+  tenant: tape
+  default_role: network
+
+secrets:
+  AKVORADO_SNMP_COMMUNITY: op://JesterTek/Akvorado Stack/AKVORADO_SNMP_COMMUNITY

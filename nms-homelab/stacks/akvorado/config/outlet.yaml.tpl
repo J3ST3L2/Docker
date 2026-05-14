@@ -1,0 +1,22 @@
+---
+metadata:
+  providers:
+    - type: snmp
+      credentials:
+        10.20.0.0/16:
+          communities: op://JesterTek/Akvorado Stack/AKVORADO_SNMP_COMMUNITY
+routing:
+  provider:
+    type: bmp
+    receive-buffer: 212992
+core:
+  exporter-classifiers:
+    - ClassifySite("home")
+    - ClassifyRegion("lab")
+    - ClassifyTenant("tape")
+    - ClassifyRole("network")
+  interface-classifiers:
+    - |
+      ClassifyConnectivityRegex(Interface.Description, "(?i)(wan|fiber|transit|ix|uplink)", "$1") &&
+      ClassifyExternal()
+    - ClassifyInternal()

@@ -1,0 +1,26 @@
+---
+# Non-secret desired state for the standalone Graylog stack.
+stack:
+  name: graylog
+  host: 10.20.60.15
+  remote_user: tberno
+  path: /opt/graylog-stack
+  compose_file: docker-compose.yml
+  runtime_env: /run/graylog-stack.env
+  token_file: /etc/1password/graylog-stack.token
+  render_script: /opt/graylog-stack/scripts/render-graylog-secrets.sh
+
+services:
+  graylog_image: graylog/graylog:7.1
+  mongodb_image: mongo:7.0
+  opensearch_image: opensearchproject/opensearch:2.4.0
+
+published_ports:
+  web: 9000
+  gelf_udp: 12201
+  syslog_udp_high: 1514
+  syslog_udp_low: 514
+
+secrets:
+  GRAYLOG_PASSWORD_SECRET: op://JesterTek/Graylog Stack/GRAYLOG_PASSWORD_SECRET
+  GRAYLOG_ROOT_PASSWORD_SHA2: op://JesterTek/Graylog Stack/GRAYLOG_ROOT_PASSWORD_SHA2

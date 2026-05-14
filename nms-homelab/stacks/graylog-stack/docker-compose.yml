@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: 'mongo:7.0'
+    container_name: graylog-stack-mongodb-1
+    volumes:
+      - /opt/graylog-stack/mongodb:/data/db
+    restart: always
+
+  opensearch:
+    image: 'opensearchproject/opensearch:2.4.0'
+    container_name: graylog-stack-opensearch-1
+    environment:
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+      - "bootstrap.memory_lock=true"
+      - "discovery.type=single-node"
+      - "action.auto_create_index=false"
+      - "plugins.security.disabled=true"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    volumes:
+      - /opt/graylog-stack/opensearch:/usr/share/opensearch/data
+    restart: always
+
+  graylog:
+    image: 'graylog/graylog:7.1'
+    container_name: graylog-stack-graylog-1
+    depends_on:
+      - mongodb
+      - opensearch
+    volumes:
+      - /opt/graylog-stack/graylog:/usr/share/graylog/data
+    environment:
+      - GRAYLOG_PASSWORD_SECRET=${GRAYLOG_PASSWORD_SECRET:?set in .env}
+      - GRAYLOG_ROOT_PASSWORD_SHA2=${GRAYLOG_ROOT_PASSWORD_SHA2:?set in .env}
+      - GRAYLOG_HTTP_BIND_ADDRESS=0.0.0.0:9000
+      - GRAYLOG_MONGODB_URI=mongodb://mongodb:27017/graylog
+      - GRAYLOG_ELASTICSEARCH_HOSTS=http://opensearch:9200
+      - GRAYLOG_NODE_ID_FILE=/usr/share/graylog/data/config/node-id
+      - GRAYLOG_DATA_DIR=/usr/share/graylog/data
+    ports:
+      - "9000:9000/tcp"
+      - "12201:12201/udp"
+      - "1514:1514/udp"
+      - "514:514/udp"
+    restart: always
