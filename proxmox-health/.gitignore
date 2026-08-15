@@ -1,5 +1,0 @@
-.env
-ssh/*
-!ssh/.gitkeep
-reports/*
-!reports/.gitkeep
