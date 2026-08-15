@@ -1,0 +1,17 @@
+name: proxmox-health
+
+services:
+  controller:
+    build:
+      context: .
+    container_name: proxmox-health
+    restart: unless-stopped
+    working_dir: /app
+    environment:
+      TZ: "${TZ:-America/New_York}"
+      DISCORD_WEBHOOK_URL: "${DISCORD_WEBHOOK_URL:-}"
+      INCIDENT_NODE: "${INCIDENT_NODE:-pve2}"
+    volumes:
+      - ./ssh:/root/.ssh
+      - ./reports:/app/reports
+    command: ["sleep", "infinity"]
