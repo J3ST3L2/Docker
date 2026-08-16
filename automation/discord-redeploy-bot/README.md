@@ -1,6 +1,6 @@
 # Homelab Discord Redeploy Bot
 
-This bot provides allowlisted Discord slash commands for testing 1Password secret rendering and redeploying fixed homelab stacks.
+This bot provides allowlisted Discord slash commands for testing 1Password secret rendering, redeploying fixed homelab stacks, and adding media to Sonarr/Radarr from one approved channel.
 
 ## Runtime Host
 
@@ -44,10 +44,20 @@ The runtime host reads it through:
 /redeploy target:akvorado
 ```
 
+```text
+/sonarr query:severance
+/radarr query:interstellar 2014
+```
+
+The media commands are available to anyone in `MEDIA_CHANNEL_ID`.
+
+After adding a Sonarr/Radarr item, the bot triggers search and checks queue/history. The Discord reply should report whether the item was queued, grabbed, or added without a matching release.
+
 ## Security Model
 
 - Fixed scripts only.
 - No arbitrary shell command execution.
-- Commands are allowlisted by Discord user ID.
+- Admin commands are allowlisted by Discord user ID.
+- Media add commands are open to anyone in the configured Discord channel ID.
 - Secrets are read from 1Password at runtime.
 - Rendered env files are removed after use.

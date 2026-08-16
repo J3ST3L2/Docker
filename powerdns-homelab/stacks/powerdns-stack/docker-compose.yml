@@ -1,0 +1,107 @@
+services:
+  pdns-db:
+    image: mariadb:11.4
+    container_name: pdns-db
+    restart: unless-stopped
+    environment:
+      MARIADB_ROOT_PASSWORD: ${PDNS_DB_ROOT_PASSWORD}
+      MARIADB_DATABASE: pdns
+      MARIADB_USER: pdns
+      MARIADB_PASSWORD: ${PDNS_DB_PASSWORD}
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    ports:
+      - "127.0.0.1:${PDNS_DB_PORT:-3306}:3306"
+    volumes:
+      - pdns_db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -u root -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 45s
+
+  pdns-auth:
+    image: powerdns/pdns-auth-50:5.0.4
+    container_name: pdns-auth
+    network_mode: host
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      pdns-db:
+        condition: service_healthy
+    entrypoint: ["/usr/local/sbin/pdns_server"]
+    command:
+      - "--config-dir=/etc/powerdns"
+      - "--daemon=no"
+      - "--guardian=no"
+      - "--gmysql-password=${PDNS_DB_PASSWORD}"
+      - "--api-key=${PDNS_AUTH_API_KEY}"
+    volumes:
+      - ./auth/pdns.d/pdns.conf:/etc/powerdns/pdns.conf:ro
+      - ./auth/bind:/etc/powerdns/bind:rw
+      - ./auth/zones:/var/lib/powerdns/zones:rw
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD-SHELL", "pdns_control list >/dev/null"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  pdns-recursor:
+    image: powerdns/pdns-recursor-52:5.2.9
+    container_name: pdns-recursor
+    network_mode: host
+    user: "0:0"
+    restart: unless-stopped
+    depends_on:
+      - pdns-auth
+    entrypoint: ["/usr/local/sbin/pdns_recursor"]
+    command: ["--config-dir=/etc/powerdns", "--daemon=no", "--enable-old-settings=yes"]
+    volumes:
+      - ./recursor/recursor.d/recursor.conf:/etc/powerdns/recursor.conf:ro
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD-SHELL", "rec_control ping | grep -qi pong"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  poweradmin:
+    image: poweradmin/poweradmin:stable
+    container_name: poweradmin
+    restart: unless-stopped
+    depends_on:
+      pdns-db:
+        condition: service_healthy
+      pdns-auth:
+        condition: service_started
+    ports:
+      - "${POWERADMIN_PORT:-9191}:80"
+    environment:
+      DB_TYPE: mysql
+      DB_HOST: pdns-db
+      DB_USER: pdns
+      DB_PASS: ${PDNS_DB_PASSWORD}
+      DB_NAME: poweradmin
+      PA_PDNS_DB_NAME: pdns
+      PA_DNS_BACKEND: api
+      PA_PDNS_API_URL: http://host.docker.internal:8081
+      PA_PDNS_API_KEY: ${PDNS_AUTH_API_KEY}
+      PA_CREATE_ADMIN: "true"
+      PA_ADMIN_USERNAME: ${POWERADMIN_ADMIN_USER:-admin}
+      PA_ADMIN_PASSWORD: ${POWERADMIN_ADMIN_PASSWORD}
+      DNS_NS1: ns1.jestertek.cc
+      DNS_NS2: ns2.jestertek.cc
+      DNS_HOSTMASTER: hostmaster.jestertek.cc
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+volumes:
+  pdns_db_data:

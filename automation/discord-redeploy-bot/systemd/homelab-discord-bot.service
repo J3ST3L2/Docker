@@ -8,8 +8,16 @@ Type=simple
 User=root
 WorkingDirectory=/opt/homelab-discord-bot
 Environment=ALLOWED_USER_ID=1399736899551101056
+Environment=MEDIA_CHANNEL_ID=1499582440971436082
+Environment=DISCORD_GUILD_ID=1440378706257383428
 Environment=OP_TOKEN_FILE=/etc/1password/jestertek-readonly.token
 Environment=SCRIPT_DIR=/opt/homelab-discord-bot/scripts
+Environment=SONARR_URL=http://10.20.60.13:8989
+Environment=RADARR_URL=http://10.20.60.13:7878
+Environment=SONARR_ROOT_FOLDER=/tv
+Environment=RADARR_ROOT_FOLDER=/movies
+Environment=SONARR_QUALITY_PROFILE_ID=1
+Environment=RADARR_QUALITY_PROFILE_ID=1
 ExecStart=/opt/homelab-discord-bot/venv/bin/python /opt/homelab-discord-bot/bot.py
 Restart=on-failure
 RestartSec=10
