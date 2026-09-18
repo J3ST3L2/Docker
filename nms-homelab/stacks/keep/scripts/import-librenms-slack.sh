@@ -5,6 +5,8 @@ STACK_DIR="${STACK_DIR:-/opt/docker-stacks/keep}"
 ENV_FILE="${ENV_FILE:-$STACK_DIR/.env}"
 API_URL="${API_URL:-http://10.20.60.15:8180}"
 WORKFLOW_ID="${WORKFLOW_ID:-home-librenms-slack}"
+SLACK_PROVIDER_NAME="${SLACK_PROVIDER_NAME:-home-slack}"
+SLACK_WEBHOOK_URL="${SLACK_WEBHOOK_URL:-}"
 
 die() {
   echo "ERROR: $*" >&2
@@ -49,10 +51,9 @@ except Exception:
 
 [[ -n "$TOKEN" ]] || die "Keep login succeeded but no access token was returned"
 
-echo "==> Discovering installed Slack provider"
-PROVIDERS_JSON="$(curl -fsS   -H "Authorization: Bearer $TOKEN"   "$API_URL/providers")" || die "Unable to query Keep providers"
-
-SLACK_PROVIDER="$(printf '%s' "$PROVIDERS_JSON" | python3 -c '
+get_slack_provider() {
+  curl -fsS     -H "Authorization: Bearer $TOKEN"     "$API_URL/providers" |
+  python3 -c '
 import json, sys
 data = json.load(sys.stdin)
 providers = [
@@ -65,9 +66,62 @@ if not providers:
 preferred = {"home-slack": 0, "slack": 1}
 providers.sort(key=lambda p: preferred.get(str(p.get("name", "")).lower(), 99))
 print(providers[0].get("name", ""))
-')"
+'
+}
 
-[[ -n "$SLACK_PROVIDER" ]] || die "No installed Slack provider found in Keep. Connect Slack first."
+echo "==> Discovering installed Slack provider"
+SLACK_PROVIDER="$(get_slack_provider || true)"
+
+if [[ -z "$SLACK_PROVIDER" ]]; then
+  echo "==> No Slack provider is installed in Keep."
+
+  if [[ -z "$SLACK_WEBHOOK_URL" ]]; then
+    read -r -s -p "Paste Slack Incoming Webhook URL: " SLACK_WEBHOOK_URL
+    echo
+  fi
+
+  [[ -n "$SLACK_WEBHOOK_URL" ]] || die "Slack webhook URL cannot be empty"
+
+  case "$SLACK_WEBHOOK_URL" in
+    https://hooks.slack.com/*)
+      ;;
+    *)
+      echo "WARNING: This does not look like a standard Slack Incoming Webhook URL."
+      read -r -p "Continue anyway? [y/N]: " answer
+      [[ "${answer:-}" =~ ^[Yy]$ ]] || die "Cancelled"
+      ;;
+  esac
+
+  echo "==> Installing Slack provider as $SLACK_PROVIDER_NAME"
+  INSTALL_PAYLOAD="$(python3 - "$SLACK_PROVIDER_NAME" "$SLACK_WEBHOOK_URL" <<'PY'
+import json
+import sys
+name = sys.argv[1]
+webhook = sys.argv[2]
+print(json.dumps({
+    "provider_id": name,
+    "provider_name": name,
+    "provider_type": "slack",
+    "pulling_enabled": False,
+    "webhook_url": webhook
+}))
+PY
+)"
+
+  INSTALL_RESPONSE_FILE="$(mktemp)"
+  INSTALL_CODE="$(curl -sS     -o "$INSTALL_RESPONSE_FILE"     -w '%{http_code}'     -X POST "$API_URL/providers/install"     -H "Authorization: Bearer $TOKEN"     -H 'Content-Type: application/json'     -d "$INSTALL_PAYLOAD")"
+
+  if [[ ! "$INSTALL_CODE" =~ ^2 ]]; then
+    echo "Keep returned HTTP $INSTALL_CODE while installing Slack:" >&2
+    cat "$INSTALL_RESPONSE_FILE" >&2
+    rm -f "$INSTALL_RESPONSE_FILE"
+    die "Slack provider installation failed"
+  fi
+  rm -f "$INSTALL_RESPONSE_FILE"
+
+  SLACK_PROVIDER="$(get_slack_provider || true)"
+  [[ -n "$SLACK_PROVIDER" ]] || die "Slack installation returned success but provider was not found afterward"
+fi
 
 echo "==> Using Slack provider: $SLACK_PROVIDER"
 
@@ -102,15 +156,24 @@ workflow:
 YAML
 
 echo "==> Uploading workflow: $WORKFLOW_ID"
-UPLOAD_RESPONSE="$(curl -fsS   -X POST "$API_URL/workflows"   -H "Authorization: Bearer $TOKEN"   -F "file=@$TMP_YAML;type=application/x-yaml")" || die "Workflow upload failed"
+UPLOAD_RESPONSE_FILE="$(mktemp)"
+UPLOAD_CODE="$(curl -sS   -o "$UPLOAD_RESPONSE_FILE"   -w '%{http_code}'   -X POST "$API_URL/workflows"   -H "Authorization: Bearer $TOKEN"   -F "file=@$TMP_YAML;type=application/x-yaml")"
 
-printf '%s\n' "$UPLOAD_RESPONSE" | python3 -c '
+if [[ ! "$UPLOAD_CODE" =~ ^2 ]]; then
+  echo "Keep returned HTTP $UPLOAD_CODE while uploading workflow:" >&2
+  cat "$UPLOAD_RESPONSE_FILE" >&2
+  rm -f "$UPLOAD_RESPONSE_FILE"
+  die "Workflow upload failed"
+fi
+
+cat "$UPLOAD_RESPONSE_FILE" | python3 -c '
 import json, sys
 data = json.load(sys.stdin)
-print(f"    status: {data.get("status", "unknown")}")
-print(f"    workflow_id: {data.get("workflow_id", "unknown")}")
-print(f"    revision: {data.get("revision", "unknown")}")
+print(f"    status: {data.get('status', 'unknown')}")
+print(f"    workflow_id: {data.get('workflow_id', 'unknown')}")
+print(f"    revision: {data.get('revision', 'unknown')}")
 '
+rm -f "$UPLOAD_RESPONSE_FILE"
 
 echo "==> Verifying workflow"
 VERIFY_JSON="$(curl -fsS   -H "Authorization: Bearer $TOKEN"   "$API_URL/workflows/$WORKFLOW_ID")" || die "Workflow uploaded but verification failed"
@@ -118,9 +181,9 @@ VERIFY_JSON="$(curl -fsS   -H "Authorization: Bearer $TOKEN"   "$API_URL/workflo
 printf '%s\n' "$VERIFY_JSON" | python3 -c '
 import json, sys
 data = json.load(sys.stdin)
-print(f"    name: {data.get("name")}")
-print(f"    disabled: {data.get("disabled")}")
-print(f"    revision: {data.get("revision")}")
+print(f"    name: {data.get('name')}")
+print(f"    disabled: {data.get('disabled')}")
+print(f"    revision: {data.get('revision')}")
 providers = data.get("providers") or []
 if providers:
     print("    providers: " + ", ".join(str(p.get("name", p.get("type", "unknown"))) for p in providers))
