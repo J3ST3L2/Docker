@@ -63,9 +63,13 @@ providers = [
 if not providers:
     sys.exit(0)
 
+def provider_name(p):
+    details = p.get("details") or {}
+    return str(details.get("name") or p.get("name") or "")
+
 preferred = {"home-slack": 0, "slack": 1}
-providers.sort(key=lambda p: preferred.get(str(p.get("name", "")).lower(), 99))
-print(providers[0].get("name", ""))
+providers.sort(key=lambda p: preferred.get(provider_name(p).lower(), 99))
+print(provider_name(providers[0]))
 '
 }
 
