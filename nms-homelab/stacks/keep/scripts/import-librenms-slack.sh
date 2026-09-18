@@ -252,7 +252,7 @@ YAML
 
 echo "==> Uploading workflow: $WORKFLOW_ID"
 UPLOAD_RESPONSE_FILE="$(mktemp)"
-UPLOAD_CODE="$(curl -sS   -o "$UPLOAD_RESPONSE_FILE"   -w '%{http_code}'   -X POST "$API_URL/workflows"   -H "Authorization: Bearer $TOKEN"   -F "file=@$TMP_YAML;type=application/x-yaml")"
+UPLOAD_CODE="$(curl -sS   -o "$UPLOAD_RESPONSE_FILE"   -w '%{http_code}'   -X POST "$API_URL/workflows?lookup_by_name=true"   -H "Authorization: Bearer $TOKEN"   -F "file=@$TMP_YAML;type=application/x-yaml")"
 
 if [[ ! "$UPLOAD_CODE" =~ ^2 ]]; then
   echo "Keep returned HTTP $UPLOAD_CODE while uploading workflow:" >&2
@@ -260,6 +260,14 @@ if [[ ! "$UPLOAD_CODE" =~ ^2 ]]; then
   rm -f "$UPLOAD_RESPONSE_FILE"
   die "Workflow upload failed"
 fi
+
+CREATED_WORKFLOW_ID="$(python3 - "$UPLOAD_RESPONSE_FILE" <<'PY'
+import json
+import sys
+data = json.load(open(sys.argv[1]))
+print(data.get("workflow_id", ""))
+PY
+)"
 
 python3 - "$UPLOAD_RESPONSE_FILE" <<'PY'
 import json
@@ -269,11 +277,13 @@ print("    status:", data.get("status", "unknown"))
 print("    workflow_id:", data.get("workflow_id", "unknown"))
 print("    revision:", data.get("revision", "unknown"))
 PY
+
+[[ -n "$CREATED_WORKFLOW_ID" ]] || die "Keep did not return a workflow_id"
 rm -f "$UPLOAD_RESPONSE_FILE"
 
-echo "==> Verifying workflow"
+echo "==> Verifying workflow: $CREATED_WORKFLOW_ID"
 VERIFY_FILE="$(mktemp)"
-VERIFY_CODE="$(curl -sS   -o "$VERIFY_FILE"   -w '%{http_code}'   -H "Authorization: Bearer $TOKEN"   "$API_URL/workflows/$WORKFLOW_ID")"
+VERIFY_CODE="$(curl -sS   -o "$VERIFY_FILE"   -w '%{http_code}'   -H "Authorization: Bearer $TOKEN"   "$API_URL/workflows/$CREATED_WORKFLOW_ID")"
 
 if [[ ! "$VERIFY_CODE" =~ ^2 ]]; then
   echo "Keep returned HTTP $VERIFY_CODE while verifying workflow:" >&2
