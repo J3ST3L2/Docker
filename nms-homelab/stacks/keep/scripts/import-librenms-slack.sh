@@ -138,8 +138,13 @@ PY
   rm -f "$RESPONSE_FILE"
 }
 
-echo "==> Discovering installed Slack provider"
-SLACK_PROVIDER="$(get_slack_provider_from_api || true)"
+if [[ -n "${SLACK_PROVIDER_NAME:-}" ]]; then
+  echo "==> Using configured Slack provider name: $SLACK_PROVIDER_NAME"
+  SLACK_PROVIDER="$SLACK_PROVIDER_NAME"
+else
+  echo "==> Discovering installed Slack provider"
+  SLACK_PROVIDER="$(get_slack_provider_from_api || true)"
+fi
 
 if [[ -z "$SLACK_PROVIDER" ]]; then
   DB_ROW="$(get_slack_row_from_db || true)"
