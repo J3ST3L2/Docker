@@ -1,24 +1,24 @@
 workflow:
-  id: homelab-librenms-slack
-  name: Homelab LibreNMS to Slack
-  description: Send normalized LibreNMS alerts to the home Slack alert channel.
-  disabled: true
+  id: home-librenms-slack
+  name: Home LibreNMS to Slack
+  description: Forward normalized LibreNMS alerts to Slack through Keep.
+  disabled: false
 
   triggers:
     - type: alert
-      cel: source.exists(x, x == "libre_nms")
+      cel: source.contains("libre_nms")
 
   actions:
     - name: send-librenms-alert-to-slack
       provider:
         type: slack
-        config: "{{ providers.home-slack }}"
+        config: "{{ providers.slack }}"
         with:
           message: |
-            *{{ alert.severity | upper }}* - {{ alert.name }}
-            *Device:* {{ alert.hostname }}
-            *IP:* {{ alert.ip }}
+            *{{ alert.severity | upper }}* - *{{ alert.name }}*
+
             *Status:* {{ alert.status }}
-            *Location:* {{ alert.location }}
-            *Details:* {{ alert.description }}
-            *Rule:* {{ alert.rule }}
+            *Device:* {{ alert.hostname | default('unknown') }}
+            *IP:* {{ alert.ip | default('unknown') }}
+            *Location:* {{ alert.location | default('unknown') }}
+            *Description:* {{ alert.description | default('No description') }}
