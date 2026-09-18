@@ -17,13 +17,27 @@ The existing direct LibreNMS -> Slack webhook stays enabled during rollout. Keep
 ## Deployment target
 
 - Docker/Dockge host: `10.20.60.15`
-- Keep UI: `http://10.20.60.15:3100`
+- Keep UI: `http://10.20.60.15:3200`
 - Keep API: `http://10.20.60.15:8180`
 - Keep websocket: `10.20.60.15:6101`
 - Authentication: local DB auth
 - Pilot database: SQLite persisted in `./state`
 
-This stack is intentionally close to Keep's upstream authenticated Docker Compose design, flattened into one Dockge-friendly compose file.
+Port 3100 is intentionally avoided because Loki already uses it on this host.
+
+## Important: state directory ownership
+
+The Keep API image runs as UID/GID `1000:1000`. The `state` directory is committed with a `.gitkeep` so a normal clone creates it as the cloning user instead of Docker creating it as root.
+
+Before first deploy, verify:
+
+```bash
+mkdir -p state
+sudo chown -R 1000:1000 state
+chmod 755 state
+```
+
+If the backend logs show `sqlite3.OperationalError: unable to open database file`, re-run the ownership commands and restart the backend.
 
 ## Deploy with Dockge
 
@@ -31,9 +45,10 @@ This stack is intentionally close to Keep's upstream authenticated Docker Compos
 2. Use the contents of `compose.yaml`.
 3. Add the variables from `.env.example` to Dockge's environment editor.
 4. Replace both `CHANGE_ME` values before deploying.
-5. Deploy the stack.
-6. Open `http://10.20.60.15:3100`.
-7. Sign in using `KEEP_DEFAULT_USERNAME` and `KEEP_DEFAULT_PASSWORD`.
+5. Verify `state/` is writable by UID 1000.
+6. Deploy the stack.
+7. Open `http://10.20.60.15:3200`.
+8. Sign in using `KEEP_DEFAULT_USERNAME` and `KEEP_DEFAULT_PASSWORD`.
 
 Generate a strong auth secret on any Linux host:
 
@@ -73,9 +88,9 @@ Keep state is stored under:
 ./state/
 ```
 
-That directory is ignored by Git.
+Runtime files inside that directory are ignored by Git; only `.gitkeep` is tracked.
 
-For the home rollout SQLite keeps the deployment simple. Before copying this design to the college production environment, re-evaluate the database and HA requirements rather than blindly promoting the homelab stack. Civilization has suffered enough from "it worked in my basement."
+For the home rollout SQLite keeps the deployment simple. Before copying this design to the college production environment, re-evaluate the database and HA requirements rather than blindly promoting the homelab stack.
 
 ## Rollout order
 

@@ -6,7 +6,8 @@
 **/graylog/
 **/geoip/*.mmdb
 **/storage.git/
-**/state/
+**/state/*
+!**/state/.gitkeep
 **/crash
 **/pid
 

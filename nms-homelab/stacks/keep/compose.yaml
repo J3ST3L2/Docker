@@ -6,11 +6,11 @@ services:
       - keep-backend
       - keep-websocket-server
     ports:
-      - "${KEEP_BIND_IP:-10.20.60.15}:${KEEP_UI_PORT:-3100}:3000"
+      - "${KEEP_BIND_IP:-10.20.60.15}:${KEEP_UI_PORT:-3200}:3000"
     environment:
       AUTH_TYPE: "DB"
       NEXTAUTH_SECRET: "${KEEP_AUTH_SECRET}"
-      NEXTAUTH_URL: "http://${KEEP_BIND_IP:-10.20.60.15}:${KEEP_UI_PORT:-3100}"
+      NEXTAUTH_URL: "http://${KEEP_BIND_IP:-10.20.60.15}:${KEEP_UI_PORT:-3200}"
       API_URL: "http://keep-backend:8080"
       NEXT_PUBLIC_API_URL: "http://${KEEP_BIND_IP:-10.20.60.15}:${KEEP_API_PORT:-8180}"
       PUSHER_HOST: "${KEEP_BIND_IP:-10.20.60.15}"
