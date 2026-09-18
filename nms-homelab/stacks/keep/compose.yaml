@@ -43,6 +43,7 @@ services:
       USE_NGROK: "false"
       PROMETHEUS_MULTIPROC_DIR: "/tmp/prometheus"
       KEEP_METRICS: "true"
+      KEEP_API_URL: "http://${KEEP_BIND_IP:-10.20.60.15}:${KEEP_API_PORT:-8180}"
       ENVIRONMENT: "production"
     volumes:
       - ./state:/state
