@@ -17,9 +17,22 @@ It does **not** run UniFi Protect. Ubiquiti does not support self-hosting Protec
 - UniFi inform: `http://10.20.60.17:8081/inform`
 - Database: MongoDB 8.0, reachable only on the private Compose network
 
+## Non-default inform port
+
+Alerta already uses TCP/8080 on Docker 2, so this deployment moves UniFi device communication to TCP/8081.
+
+This is not implemented as a simple Docker `8081:8080` translation. UniFi must itself listen on and advertise the changed inform port. The `unifi-config-init` service maintains these values in `/config/data/system.properties` before the Network application starts:
+
+```text
+unifi.http.port=8081
+system_ip=10.20.60.17
+```
+
+The application container therefore publishes `8081:8081`.
+
 ## Files
 
-- `compose.yaml` - UniFi Network + MongoDB
+- `compose.yaml` - UniFi Network + MongoDB + configuration initializer
 - `.env.example` - host settings and secret placeholders
 - `init-mongo.sh` - first-run MongoDB user/database initialization
 - `data/` - runtime state created locally and ignored by Git
@@ -64,7 +77,7 @@ Allow UniFi devices to reach Docker 2 at `10.20.60.17` on:
 
 | Port | Protocol | Purpose |
 |---|---|---|
-| 8081 | TCP | Device inform/adoption (published to container port 8080) |
+| 8081 | TCP | Device inform/adoption |
 | 3478 | UDP | STUN |
 | 10001 | UDP | Device discovery |
 | 8443 | TCP | Admin UI |
@@ -73,7 +86,7 @@ MongoDB port 27017 is intentionally **not** published on the host.
 
 ## AP adoption across VLANs
 
-Layer-2 discovery will not magically leap across routed VLANs because Ethernet remains stubbornly committed to physics.
+Layer-2 discovery will not cross routed VLANs.
 
 For an AP on another VLAN, SSH to the AP and set its controller:
 
@@ -82,14 +95,6 @@ set-inform http://10.20.60.17:8081/inform
 ```
 
 After the AP appears in UniFi and you click Adopt, run the same `set-inform` command again if adoption does not finish immediately.
-
-Once the controller is running, set the UniFi **Inform Host Override** to:
-
-```text
-10.20.60.17
-```
-
-so adopted devices keep using the reachable host address instead of a Docker bridge address.
 
 ## Logs and status
 
@@ -101,15 +106,7 @@ docker compose logs --tail=100 unifi-db
 docker compose logs --tail=100 unifi-network-application
 ```
 
-Follow the UniFi log:
-
-```bash
-docker compose logs -f unifi-network-application
-```
-
 ## Updating
-
-Do not use an unattended auto-updater for this stack.
 
 Update intentionally:
 
@@ -120,7 +117,7 @@ docker compose up -d
 docker image prune
 ```
 
-MongoDB is pinned to the 8.0 release family rather than `latest` to prevent an accidental major-version database upgrade.
+MongoDB is pinned to the 8.0 release family rather than `latest`.
 
 ## Backup
 
@@ -131,9 +128,10 @@ data/unifi/
 data/mongodb/
 ```
 
-UniFi's own Network backup/export should also be enabled after initial setup. A UniFi application backup is the preferred migration/recovery artifact rather than treating a live MongoDB directory copy as a database backup.
+Also maintain a UniFi Network backup/export for migration and recovery.
 
 ## References
 
 - Ubiquiti self-hosting: https://help.ui.com/hc/en-us/articles/34210126298775-Self-Hosting-UniFi
-- LinuxServer UniFi Network Application image: https://docs.linuxserver.io/images/docker-unifi-network-application/
+- Ubiquiti system.properties: https://help.ui.com/hc/en-us/articles/205202580-Explaining-the-UniFi-system-properties-File
+- LinuxServer UniFi Network Application: https://docs.linuxserver.io/images/docker-unifi-network-application/
