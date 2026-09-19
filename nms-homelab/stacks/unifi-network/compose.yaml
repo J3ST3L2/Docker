@@ -31,6 +31,29 @@ services:
     networks:
       - unifi-backend
 
+  unifi-config-init:
+    image: alpine:3.22
+    container_name: unifi-config-init
+    restart: "no"
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      UNIFI_BIND_IP: "${UNIFI_BIND_IP:-10.20.60.17}"
+      UNIFI_INFORM_PORT: "${UNIFI_INFORM_PORT:-8081}"
+    volumes:
+      - ./data/unifi:/config
+    command:
+      - /bin/sh
+      - -ec
+      - |
+        mkdir -p /config/data
+        touch /config/data/system.properties
+        sed -i '/^unifi.http.port=/d;/^system_ip=/d' /config/data/system.properties
+        printf 'unifi.http.port=%s\nsystem_ip=%s\n' "$$UNIFI_INFORM_PORT" "$$UNIFI_BIND_IP" >> /config/data/system.properties
+        chown "$$PUID:$$PGID" /config/data/system.properties
+    networks:
+      - unifi-backend
+
   unifi-network-application:
     image: lscr.io/linuxserver/unifi-network-application:latest
     container_name: unifi-network-application
@@ -38,6 +61,8 @@ services:
     depends_on:
       unifi-db:
         condition: service_healthy
+      unifi-config-init:
+        condition: service_completed_successfully
     environment:
       PUID: "${PUID:-1000}"
       PGID: "${PGID:-1000}"
@@ -54,7 +79,7 @@ services:
       - ./data/unifi:/config
     ports:
       - "${UNIFI_BIND_IP:-10.20.60.17}:${UNIFI_HTTPS_PORT:-8443}:8443/tcp"
-      - "${UNIFI_BIND_IP:-10.20.60.17}:${UNIFI_INFORM_PORT:-8081}:8080/tcp"
+      - "${UNIFI_BIND_IP:-10.20.60.17}:${UNIFI_INFORM_PORT:-8081}:${UNIFI_INFORM_PORT:-8081}/tcp"
       - "${UNIFI_BIND_IP:-10.20.60.17}:3478:3478/udp"
       - "${UNIFI_BIND_IP:-10.20.60.17}:10001:10001/udp"
     stop_grace_period: 30s
