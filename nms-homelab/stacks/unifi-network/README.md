@@ -14,7 +14,7 @@ It does **not** run UniFi Protect. Ubiquiti does not support self-hosting Protec
 - Host IP: `10.20.60.17`
 - Stack path: `/opt/docker-stacks/unifi-network`
 - Web UI: `https://10.20.60.17:8443`
-- UniFi inform: `http://10.20.60.17:8080/inform`
+- UniFi inform: `http://10.20.60.17:8081/inform`
 - Database: MongoDB 8.0, reachable only on the private Compose network
 
 ## Files
@@ -64,7 +64,7 @@ Allow UniFi devices to reach Docker 2 at `10.20.60.17` on:
 
 | Port | Protocol | Purpose |
 |---|---|---|
-| 8080 | TCP | Device inform/adoption |
+| 8081 | TCP | Device inform/adoption (published to container port 8080) |
 | 3478 | UDP | STUN |
 | 10001 | UDP | Device discovery |
 | 8443 | TCP | Admin UI |
@@ -78,7 +78,7 @@ Layer-2 discovery will not magically leap across routed VLANs because Ethernet r
 For an AP on another VLAN, SSH to the AP and set its controller:
 
 ```bash
-set-inform http://10.20.60.17:8080/inform
+set-inform http://10.20.60.17:8081/inform
 ```
 
 After the AP appears in UniFi and you click Adopt, run the same `set-inform` command again if adoption does not finish immediately.
