@@ -1,0 +1,66 @@
+name: unifi-network
+
+services:
+  unifi-db:
+    image: mongo:8.0-noble
+    container_name: unifi-db
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: "${MONGO_ROOT_USER:-root}"
+      MONGO_INITDB_ROOT_PASSWORD: "${MONGO_ROOT_PASSWORD}"
+      MONGO_USER: "${MONGO_USER:-unifi}"
+      MONGO_PASS: "${MONGO_PASS}"
+      MONGO_DBNAME: "${MONGO_DBNAME:-unifi}"
+      MONGO_AUTHSOURCE: "${MONGO_AUTHSOURCE:-admin}"
+    volumes:
+      - ./data/mongodb:/data/db
+      - ./init-mongo.sh:/docker-entrypoint-initdb.d/init-mongo.sh:ro
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          mongosh --quiet
+          --username "$$MONGO_INITDB_ROOT_USERNAME"
+          --password "$$MONGO_INITDB_ROOT_PASSWORD"
+          --authenticationDatabase admin
+          --eval 'quit(db.adminCommand({ ping: 1 }).ok ? 0 : 2)'
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - unifi-backend
+
+  unifi-network-application:
+    image: lscr.io/linuxserver/unifi-network-application:latest
+    container_name: unifi-network-application
+    restart: unless-stopped
+    depends_on:
+      unifi-db:
+        condition: service_healthy
+    environment:
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      TZ: "${TZ:-America/New_York}"
+      MONGO_USER: "${MONGO_USER:-unifi}"
+      MONGO_PASS: "${MONGO_PASS}"
+      MONGO_HOST: "unifi-db"
+      MONGO_PORT: "27017"
+      MONGO_DBNAME: "${MONGO_DBNAME:-unifi}"
+      MONGO_AUTHSOURCE: "${MONGO_AUTHSOURCE:-admin}"
+      MEM_LIMIT: "${UNIFI_MEM_LIMIT:-2048}"
+      MEM_STARTUP: "${UNIFI_MEM_STARTUP:-1024}"
+    volumes:
+      - ./data/unifi:/config
+    ports:
+      - "${UNIFI_BIND_IP:-10.20.60.15}:${UNIFI_HTTPS_PORT:-8443}:8443/tcp"
+      - "${UNIFI_BIND_IP:-10.20.60.15}:8080:8080/tcp"
+      - "${UNIFI_BIND_IP:-10.20.60.15}:3478:3478/udp"
+      - "${UNIFI_BIND_IP:-10.20.60.15}:10001:10001/udp"
+    stop_grace_period: 30s
+    networks:
+      - unifi-backend
+
+networks:
+  unifi-backend:
+    driver: bridge
