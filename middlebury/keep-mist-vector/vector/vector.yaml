@@ -112,6 +112,7 @@ sinks:
     request:
       headers:
         Content-Type: application/json
+        X-Service-Name: mist-vector
       timeout_secs: 15
       retry_attempts: 20
       retry_initial_backoff_secs: 1
