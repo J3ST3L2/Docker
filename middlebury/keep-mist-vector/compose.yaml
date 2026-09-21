@@ -5,10 +5,7 @@ services:
     restart: unless-stopped
     network_mode: host
 
-    environment:
-      MIST_WEBHOOK_USERNAME: ${MIST_WEBHOOK_USERNAME:-mist}
-      MIST_WEBHOOK_PASSWORD: ${MIST_WEBHOOK_PASSWORD}
-      VECTOR_LOG: ${VECTOR_LOG:-info}
+    environment:\n      VECTOR_LOG: ${VECTOR_LOG:-info}
 
     volumes:
       - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
