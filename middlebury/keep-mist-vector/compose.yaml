@@ -3,21 +3,20 @@ services:
     image: timberio/vector:0.58.0-debian
     container_name: keep-mist-vector
     restart: unless-stopped
+    network_mode: host
 
     environment:
-      MIST_WEBHOOK_SECRET: ${MIST_WEBHOOK_SECRET}
-      MIST_WEBHOOK_TOKEN: ${MIST_WEBHOOK_TOKEN}
+      MIST_WEBHOOK_USERNAME: ${MIST_WEBHOOK_USERNAME:-mist}
+      MIST_WEBHOOK_PASSWORD: ${MIST_WEBHOOK_PASSWORD}
       VECTOR_LOG: ${VECTOR_LOG:-info}
 
     volumes:
       - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
       - vector-data:/var/lib/vector
 
-    ports:
-      - "127.0.0.1:8686:8686"
-
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    command:
+      - --config
+      - /etc/vector/vector.yaml
 
     healthcheck:
       test: ["CMD", "vector", "validate", "--no-environment", "/etc/vector/vector.yaml"]
