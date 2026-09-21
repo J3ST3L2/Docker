@@ -6,6 +6,8 @@ sources:
     address: 127.0.0.1:8686
     decoding:
       codec: json
+    framing:
+      method: bytes
     headers:
       - user-agent
       - x-mist-signature
