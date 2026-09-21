@@ -8,14 +8,6 @@ if [[ ! -f .env ]]; then
   exit 1
 fi
 
-set -a
-source ./.env
-set +a
-
-if [[ -z "${MIST_WEBHOOK_USERNAME:-}" || -z "${MIST_WEBHOOK_PASSWORD:-}" ]]; then
-  echo "Mist webhook username/password are not set in .env." >&2
-  exit 1
-fi
 
 curl -fsS -i   --user "${MIST_WEBHOOK_USERNAME}:${MIST_WEBHOOK_PASSWORD}"   -X POST   http://127.0.0.1:8686/   -H 'Content-Type: application/json'   --data '{
     "topic": "alarms",
