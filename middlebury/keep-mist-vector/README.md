@@ -61,7 +61,7 @@ Then:
 
 ```bash
 chmod 600 .env
-sudo ./scripts/install.sh
+sudo bash scripts/install.sh
 ```
 
 If the repository is already cloned elsewhere, copy or rsync this directory into `/opt/stacks/keep-mist-vector` instead of cloning a second copy.
@@ -103,7 +103,7 @@ Before touching Mist:
 
 ```bash
 cd /opt/stacks/keep-mist-vector
-./scripts/test-local.sh
+bash scripts/test-local.sh
 ```
 
 A successful request should result in a Keep alert for:
