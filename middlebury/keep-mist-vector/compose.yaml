@@ -5,7 +5,8 @@ services:
     restart: unless-stopped
     network_mode: host
 
-    environment:\n      VECTOR_LOG: ${VECTOR_LOG:-info}
+    environment:
+      VECTOR_LOG: ${VECTOR_LOG:-info}
 
     volumes:
       - ./vector/vector.yaml:/etc/vector/vector.yaml:ro
