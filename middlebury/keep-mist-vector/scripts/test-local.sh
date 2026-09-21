@@ -3,13 +3,11 @@ set -euo pipefail
 
 cd "$(dirname "$0")/.."
 
-if [[ ! -f .env ]]; then
-  echo "Missing .env. Copy .env.example to .env and set MIST_WEBHOOK_PASSWORD." >&2
-  exit 1
-fi
-
-
-curl -fsS -i   --user "${MIST_WEBHOOK_USERNAME}:${MIST_WEBHOOK_PASSWORD}"   -X POST   http://127.0.0.1:8686/   -H 'Content-Type: application/json'   --data '{
+curl -fsS -i \
+  -X POST \
+  http://127.0.0.1:8686/ \
+  -H 'Content-Type: application/json' \
+  --data '{
     "topic": "alarms",
     "org_id": "test-org",
     "site_id": "test-site",
