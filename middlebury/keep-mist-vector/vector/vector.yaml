@@ -6,10 +6,6 @@ sources:
     address: 127.0.0.1:8686
     decoding:
       codec: json
-    auth:
-      strategy: basic
-      username: "${MIST_WEBHOOK_USERNAME}"
-      password: "${MIST_WEBHOOK_PASSWORD}"
     headers:
       - user-agent
       - x-mist-signature
