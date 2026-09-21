@@ -23,7 +23,7 @@ transforms:
     drop_on_error: true
     source: |
       if exists(.events) && is_array(.events) {
-        . = unnest(.events)
+        . = unnest!(.events)
       }
 
   normalize_mist_alert:
@@ -35,101 +35,52 @@ transforms:
       event = if exists(.events) && is_object(.events) { .events } else { . }
 
       topic = downcase(to_string(.topic) ?? "alarms")
-      event_type = downcase(
-        to_string(event.type) ??
-        to_string(event.event) ??
-        to_string(event.alert) ??
-        to_string(event.name) ??
-        "mist_alert"
-      )
+      event_type = downcase(to_string(event.type) ?? to_string(event.event) ?? to_string(event.alert) ?? to_string(event.name) ?? "mist_alert")
+      state = downcase(to_string(event.details.state) ?? to_string(event.state) ?? to_string(event.status) ?? "")
+      severity_raw = downcase(to_string(event.severity) ?? to_string(event.level) ?? "warning")
 
-      state = downcase(
-        to_string(event.details.state) ??
-        to_string(event.state) ??
-        to_string(event.status) ??
-        ""
-      )
-
-      severity_raw = downcase(
-        to_string(event.severity) ??
-        to_string(event.level) ??
-        "warning"
-      )
-
-      severity = if includes(["critical", "emergency", "fatal"], severity_raw) {
+      severity = if severity_raw == "critical" || severity_raw == "emergency" || severity_raw == "fatal" {
         "critical"
-      } else if includes(["high", "major"], severity_raw) {
+      } else if severity_raw == "high" || severity_raw == "major" {
         "high"
-      } else if includes(["warning", "warn", "minor"], severity_raw) {
+      } else if severity_raw == "warning" || severity_raw == "warn" || severity_raw == "minor" {
         "warning"
-      } else if includes(["low", "info", "informational"], severity_raw) {
-        "low"
       } else {
-        "warning"
+        "low"
       }
 
-      is_resolved = (
-        state == "validated" ||
-        state == "resolved" ||
-        state == "cleared" ||
-        match(event_type, r'(^|_)(reconnected|resolved|cleared|online|up)($|_)')
-      )
+      is_resolved = state == "validated" || state == "resolved" || state == "cleared" || match(event_type, r'(^|_)(reconnected|resolved|cleared|online|up)($|_)')
+      status_value = if is_resolved { "resolved" } else { "firing" }
 
-      status = if is_resolved { "resolved" } else { "firing" }
-
-      device = (
-        to_string(event.device_name) ??
-        to_string(event.hostname) ??
-        to_string(event.ap_name) ??
-        to_string(event.switch_name) ??
-        to_string(event.gateway_name) ??
-        to_string(event.name) ??
-        "unknown-device"
-      )
-
-      mac = downcase(
-        to_string(event.mac) ??
-        to_string(event.ap) ??
-        to_string(event.device_mac) ??
-        ""
-      )
+      device = to_string(event.device_name) ?? to_string(event.hostname) ?? to_string(event.ap_name) ?? to_string(event.switch_name) ?? to_string(event.gateway_name) ?? to_string(event.name) ?? "unknown-device"
+      mac = downcase(to_string(event.mac) ?? to_string(event.ap) ?? to_string(event.device_mac) ?? "")
 
       site_id = to_string(event.site_id) ?? to_string(.site_id) ?? ""
       org_id = to_string(event.org_id) ?? to_string(.org_id) ?? ""
       site_name = to_string(event.site_name) ?? to_string(.site_name) ?? ""
 
-      message = (
-        to_string(event.text) ??
-        to_string(event.reason) ??
-        to_string(event.message) ??
+      message_text = to_string(event.text) ?? to_string(event.reason) ?? to_string(event.message) ?? event_type
+      event_time = to_string(event.timestamp) ?? to_string(event.time) ?? format_timestamp!(now(), format: "%+")
+
+      canonical_type = if contains(event_type, "down") || contains(event_type, "offline") || contains(event_type, "reconnected") || contains(event_type, "online") {
+        "device_state"
+      } else {
         event_type
-      )
-
-      timestamp = (
-        to_string(event.timestamp) ??
-        to_string(event.time) ??
-        to_string(now())
-      )
-
-      canonical_type = replace(
-        event_type,
-        r'(reconnected|resolved|cleared|online|up)',
-        "down"
-      )
+      }
 
       identity = if mac != "" { mac } else { downcase(device) }
-      fingerprint = "mist:" + topic + ":" + canonical_type + ":" + identity
+      fingerprint_value = "mist:" + topic + ":" + canonical_type + ":" + identity
 
       . = {}
       .name = device + ": " + event_type
-      .status = status
+      .status = status_value
       .severity = severity
-      .lastReceived = timestamp
+      .lastReceived = event_time
       .service = "network"
       .source = ["mist"]
-      .message = message
-      .description = message
-      .fingerprint = fingerprint
+      .message = message_text
+      .description = message_text
+      .fingerprint = fingerprint_value
 
       .labels = {}
       .labels.mist_topic = topic
