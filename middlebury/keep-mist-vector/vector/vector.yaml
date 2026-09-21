@@ -6,8 +6,6 @@ sources:
     address: 127.0.0.1:8686
     decoding:
       codec: json
-    acknowledgements:
-      enabled: true
     auth:
       strategy: basic
       username: "${MIST_WEBHOOK_USERNAME}"
@@ -25,9 +23,7 @@ transforms:
     drop_on_error: true
     source: |
       if exists(.events) && is_array(.events) {
-        . = unnest!(.events)
-      } else {
-        . = [.]
+        . = unnest(.events)
       }
 
   normalize_mist_alert:
@@ -72,21 +68,24 @@ transforms:
         "warning"
       }
 
-      is_resolved =
+      is_resolved = (
         state == "validated" ||
         state == "resolved" ||
         state == "cleared" ||
         match(event_type, r'(^|_)(reconnected|resolved|cleared|online|up)($|_)')
+      )
 
       status = if is_resolved { "resolved" } else { "firing" }
 
-      device = to_string(event.device_name) ??
-               to_string(event.hostname) ??
-               to_string(event.ap_name) ??
-               to_string(event.switch_name) ??
-               to_string(event.gateway_name) ??
-               to_string(event.name) ??
-               "unknown-device"
+      device = (
+        to_string(event.device_name) ??
+        to_string(event.hostname) ??
+        to_string(event.ap_name) ??
+        to_string(event.switch_name) ??
+        to_string(event.gateway_name) ??
+        to_string(event.name) ??
+        "unknown-device"
+      )
 
       mac = downcase(
         to_string(event.mac) ??
@@ -99,14 +98,18 @@ transforms:
       org_id = to_string(event.org_id) ?? to_string(.org_id) ?? ""
       site_name = to_string(event.site_name) ?? to_string(.site_name) ?? ""
 
-      message = to_string(event.text) ??
-                to_string(event.reason) ??
-                to_string(event.message) ??
-                event_type
+      message = (
+        to_string(event.text) ??
+        to_string(event.reason) ??
+        to_string(event.message) ??
+        event_type
+      )
 
-      timestamp = to_string(event.timestamp) ??
-                  to_string(event.time) ??
-                  to_string(now())
+      timestamp = (
+        to_string(event.timestamp) ??
+        to_string(event.time) ??
+        to_string(now())
+      )
 
       canonical_type = replace(
         event_type,
@@ -117,27 +120,26 @@ transforms:
       identity = if mac != "" { mac } else { downcase(device) }
       fingerprint = "mist:" + topic + ":" + canonical_type + ":" + identity
 
-      . = {
-        "name": device + ": " + event_type,
-        "status": status,
-        "severity": severity,
-        "lastReceived": timestamp,
-        "service": "network",
-        "source": ["mist"],
-        "message": message,
-        "description": message,
-        "fingerprint": fingerprint,
-        "labels": {
-          "mist_topic": topic,
-          "mist_event_type": event_type,
-          "mist_state": state,
-          "mist_org_id": org_id,
-          "mist_site_id": site_id,
-          "mist_site_name": site_name,
-          "mist_device": device,
-          "mist_mac": mac
-        }
-      }
+      . = {}
+      .name = device + ": " + event_type
+      .status = status
+      .severity = severity
+      .lastReceived = timestamp
+      .service = "network"
+      .source = ["mist"]
+      .message = message
+      .description = message
+      .fingerprint = fingerprint
+
+      .labels = {}
+      .labels.mist_topic = topic
+      .labels.mist_event_type = event_type
+      .labels.mist_state = state
+      .labels.mist_org_id = org_id
+      .labels.mist_site_id = site_id
+      .labels.mist_site_name = site_name
+      .labels.mist_device = device
+      .labels.mist_mac = mac
 
 sinks:
   keep:
@@ -154,7 +156,7 @@ sinks:
       timeout_secs: 1
     buffer:
       type: disk
-      max_size: 268435456
+      max_size: 268435488
       when_full: block
     acknowledgements:
       enabled: true
